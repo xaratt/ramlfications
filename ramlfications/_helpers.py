@@ -10,7 +10,7 @@ import os
 import six
 
 from .errors import LoadRAMLError
-from .loader import RAMLLoader
+from .loader import RAMLLoader, RAMLURILoader
 
 
 def load_file(raml_file):
@@ -23,6 +23,10 @@ def load_file(raml_file):
 
 def load_string(raml_str):
     return RAMLLoader().load(raml_str)
+
+
+def load_uri(raml_uri):
+    return RAMLURILoader().load(raml_uri)
 
 
 def _get_raml_object(raml_file):

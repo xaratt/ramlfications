@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2015 Spotify AB
 
-__all__ = ["RAMLLoader"]
+__all__ = ["RAMLLoader", "RAMLURILoader"]
 
 try:
     from collections import OrderedDict
@@ -12,6 +12,7 @@ import os
 
 import jsonref
 import yaml
+import six
 
 from .errors import LoadRAMLError
 
@@ -92,3 +93,47 @@ class RAMLLoader(object):
         except yaml.constructor.ConstructorError as e:
             msg = "Error parsing RAML: {0}".format(e)
             raise LoadRAMLError(msg)
+
+
+class RAMLURILoader(RAMLLoader):
+    """
+    Extends RAMLLoader to load RAML files from URI
+    """
+
+    def __init__(self):
+        self._raml_uri = None
+
+    def _yaml_include(self, loader, node):
+        """
+        Adds the ability to follow ``!include`` directives within
+        RAML Files.
+        """
+        # Get the path out of the yaml file
+        file_name = six.moves.urllib.parse.urljoin(self._raml_uri, node.value)
+        file_ext = os.path.splitext(file_name)[1]
+        parsable_ext = [".yaml", ".yml", ".raml", ".json"]
+
+        if file_ext not in parsable_ext:
+            inputfile = six.moves.urllib.request.urlopen(file_name)
+            return inputfile.read()
+
+        if file_ext == ".json":
+            return self._parse_json(file_name)
+
+        inputfile = six.moves.urllib.request.urlopen(file_name)
+        return yaml.load(inputfile, self._ordered_loader)
+
+    def _parse_json(self, jsonfile):
+        """
+        Parses JSON as well as resolves any `$ref`s, including references to
+        local files and remote (HTTP/S) files.
+        """
+        schema = jsonref.load_uri(jsonfile, base_uri=None, jsonschema=True)
+        return schema
+
+    def load(self, raml):
+        self._raml_uri = raml
+        res = six.moves.urllib.request.urlopen(raml)
+        raml_content = res.read()
+        return super(RAMLURILoader, self).load(raml_content)
+
