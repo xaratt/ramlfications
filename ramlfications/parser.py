@@ -928,8 +928,8 @@ def create_node(name, raw_data, method, parent, root):
                     return s
 
     def get_attribute_levels(attribute):
-        method_level = get_method(attribute)
-        resource_level = get_resource(attribute)
+        method_level = get_method(attribute) or {}
+        resource_level = get_resource(attribute) or {}
         return OrderedDict(list(iteritems(method_level)) +
                            list(iteritems(resource_level)))
 
